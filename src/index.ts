@@ -2,7 +2,7 @@ import * as fs from 'fs/promises';
 import fetch from 'node-fetch';
 import * as convert from 'xml-js';
 
-const bggBaseURL = 'https://boardgamegeek.com/xmlapi/';
+const bggBaseURL = process.env.BGG_URL ?? 'https://boardgamegeek.com/xmlapi/';
 
 interface GameDataSave {
   id: string;
