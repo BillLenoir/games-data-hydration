@@ -1,240 +1,148 @@
 import * as fs from 'fs/promises';
 import fetch from 'node-fetch';
 import * as convert from 'xml-js';
+import { GameDataRead, GameDataSave } from './interfaces';
 
 const bggBaseURL = process.env.BGG_URL ?? 'https://boardgamegeek.com/xmlapi/';
 
-interface GameDataSave {
-  id: string;
-  title: string;
-  yearpublished: string;
-  thumbnail: string;
-  publisher: string;
-  description: string;
-  gameown: boolean;
-  gamewanttobuy: boolean;
-  gameprevowned: boolean;
-  gamefortrade: boolean;
+async function prepareData(username: string): Promise<void> {
 
-}
-
-// This types what is returned from BGG for a game in my collection
-interface GameDataRead {
-  _declaration: {
-    _attributes: {
-      version: string;
-      encoding: string;
-      standalone: string;
-    };
-  };
-  items: {
-    _attributes: {
-      totalitems: string;
-      termsofuse: string;
-      pubdate: string;
-    };
-    item: {
-      _attributes: {
-        objecttype: string;
-        objectid: string;
-        subtype: string;
-        collid: string;
-      };
-      name: {
-        _attributes: Attributes;
-        _text: string;
-      };
-      yearpublished: Attributes;
-      image: Attributes;
-      thumbnail: Attributes;
-      stats: {
-        _attributes: {
-          minplayers: string;
-          maxplayers: string;
-          minplaytime: string;
-          maxplaytime: string;
-          playingtime: string;
-          numowned: string;
-        };
-        rating: {
-          _attributes: Attributes;
-          usersrated: {
-            _attributes: Attributes;
-          };
-          average: {
-            _attributes: Attributes;
-          };
-          bayesaverage: {
-            _attributes: Attributes;
-          };
-          stddev: {
-            _attributes: Attributes;
-          };
-          median: {
-            _attributes: Attributes;
-          };
-        };
-      };
-      status: {
-        _attributes: {
-          own: string;
-          prevowned: string;
-          fortrade: string;
-          want: string;
-          wanttoplay: string;
-          wanttobuy: string;
-          wishlist: string;
-          preordered: string;
-          lastmodified: string;
-        };
-      };
-      numplays: Attributes;
-    };
-  }[];
-}
-
-interface Attributes {
-  _text: string;
-}
-
-// This is the main function. It triggers all of the work needed
-// to request, transform, process, and save the collection data.
-async function fetchAndProcessCollectionData(username: string): Promise<void> {
   // Fetch the data from BGG.
-  const collectionData: GameDataRead[] = await fetchCollectionDataFromBGG(username);
-  const rawDataFile = './data/rawData.json';
-  let message = 'Raw Data File';
+  const rawResponseFile: string = './data/rawResponse.xml';
+  const rawResponse: string = await fetchCollectionData(username);
 
-  // Write the transformed response from BGG to disk.
-  await writeDataToFile(rawDataFile, collectionData, message);
+  // Save the response.
+  await fs.writeFile(rawResponseFile, rawResponse);
+  console.log('Raw Response XML File successfully written!');
+
+  // Transform the response
+  const convertedResponse = convert.xml2json(rawResponse, { compact: true, spaces: 2 });
+  const collectionData: GameDataRead = JSON.parse(convertedResponse);
+  console.log('I transformed the data!');
 
   // Process the returned list of games
+  const parsedDataFile = './data/collectionData.json';
   const parsedData: GameDataSave[] = await parseData(collectionData);
 
-  const parsedDataFile = './data/collectionData.json';
-  message = 'Parsed Data File';
+  // Save the final output. Still need to tigger hydration.
+  const writeableParsedData = JSON.stringify(parsedData);
+  await fs.writeFile(parsedDataFile, writeableParsedData);
+  console.log('Parsed Data File successfully written!');
 
-  await writeDataToFile(parsedDataFile, parsedData, message);
 }
 
-// Requests the data from BGG, which returns XML.
-// Transform the XML into JSON and return it.
-async function fetchCollectionDataFromBGG(username: string) {
-  const collectionDataURL: string = `${bggBaseURL}collection/${username}`;
-  const response = await fetch(collectionDataURL);
+async function fetchCollectionData(username:string) {
 
-  console.log(response.status);
+  const requestURL: string = `${bggBaseURL}collection/${username}`;
+  const response = await fetch(requestURL);
 
   if (!response.ok) {
     throw new Error(`HTTP error! Status: ${response.status}`);
   }
 
-  const xmlData = await response.text();
-  const responseData = convert.xml2json(xmlData, { compact: true, spaces: 2 });
-  const returnData = JSON.parse(responseData);
-  return returnData;
-}
+  const rawResponseText = await response.text();
+  console.log('I fetched the data!');
+  return rawResponseText;
 
-// Handles all writing to disk.
-async function writeDataToFile(file: string, data: (GameDataRead | GameDataSave)[], message: string): Promise<void> {
-  await fs.writeFile(file, JSON.stringify(data));
-  console.log(`${message} successfully written`);
 }
 
 // Once the collection request has been returned and transformed,
 // extract each game's games data and request additional data from BGG.
-async function parseData(collectionData: GameDataRead[]) {
+async function parseData(collectionData: GameDataRead) {
   const parsedCollectionData: GameDataSave[] = [];
 
   for (const game of collectionData.items.item) {
-    // Data from the collection request.
-    // There's no guarantee that the response
-    // will contain all of the needed elements.
 
-    const gameID: string = game._attributes.objectid;
+    // Only care about games that I own, want, previously owned, or want to sell or trade
+    if (game.status._attributes.own === '1' || game.status._attributes.want === '1' || game.status._attributes.prevowned === '1' || game.status._attributes.fortrade === '1') {
 
-    const gameTitle: string = game.name._text;
+      // Data from the collection request.
+      // There's no guarantee that the response
+      // will contain all of the needed elements.
 
-    let gameYearPublished: string = '';
-    if (game.yearpublished != null) {
-      gameYearPublished = game.yearpublished._text;
-    }
+      const gameID: string = game._attributes.objectid;
 
-    let gameThumbnail: string = '';
-    if (game.thumbnail != null) {
-      gameThumbnail = game.thumbnail._text;
-    }
+      const gameTitle: string = game.name._text;
 
-    const gameData = await fetchGameDataFromBGG(gameID);
-
-    // Data from the game request
-
-    let gameDescription: string = '';
-    if (gameData.boardgames.boardgame.description._text != null) {
-      gameDescription = gameData.boardgames.boardgame.description._text;
-    }
-
-    // Some games have more than 1 publisher and the data structure for this differs
-    // If it is an array, that means there's more than one. We extract just the publisher
-    // name, adding it to an array which is then joined and saved as gamePublisher.
-    let gamePublisher: string = '';
-    if (gameData.boardgames.boardgame.boardgamepublisher[0] != null) {
-      const publisherArray = [];
-      for (const publisher of gameData.boardgames.boardgame.boardgamepublisher) {
-        publisherArray.push(publisher._text);
-        gamePublisher = publisherArray.join('xxxxx');
+      let gameYearPublished: string = '';
+      if (game.yearpublished != null) {
+        gameYearPublished = game.yearpublished._text;
       }
-    } else {
-      gamePublisher = gameData.boardgames.boardgame.boardgamepublisher._text;
-    }
 
-    // If the collection request didn't return a thumbnail,
-    // maybe the game request did. (maybe)
-    if (gameThumbnail === null && gameData.boardgames.boardgame.thumbnail != null) {
-      gameThumbnail = gameData.boardgames.boardgame.thumbnail;
-    }
+      let gameThumbnail: string = '';
+      if (game.thumbnail != null) {
+        gameThumbnail = game.thumbnail._text;
+      }
 
-    // The games relationship to my collection
-    let gameOwn: boolean = false;
-    let gameWantToBuy: boolean = false;
-    let gamePrevOwned: boolean = false;
-    let gameForTrade: boolean = false;
+      const gameData = await fetchGameDataFromBGG(gameID);
 
-    if (game.status._attributes.own === '1') {
-      gameOwn = true;
-    }
+      // Data from the game request
 
-    if (game.status._attributes.want === '1') {
-      gameWantToBuy = true;
-    }
+      let gameDescription: string = '';
+      if (gameData.boardgames.boardgame.description._text != null) {
+        gameDescription = gameData.boardgames.boardgame.description._text;
+      }
 
-    if (game.status._attributes.prevowned === '1') {
-      gamePrevOwned = true;
-    }
+      // Some games have more than 1 publisher and the data structure for this differs
+      // If it is an array, that means there's more than one. We extract just the publisher
+      // name, adding it to an array which is then joined and saved as gamePublisher.
+      let gamePublisher: string = '';
+      if (gameData.boardgames.boardgame.boardgamepublisher[0] != null) {
+        const publisherArray = [];
+        for (const publisher of gameData.boardgames.boardgame.boardgamepublisher) {
+          publisherArray.push(publisher._text);
+          gamePublisher = publisherArray.join('xxxxx');
+        }
+      } else {
+        gamePublisher = gameData.boardgames.boardgame.boardgamepublisher._text;
+      }
 
-    if (game.status._attributes.fortrade === '1') {
-      gameForTrade = true;
-    }
+      // If the collection request didn't return a thumbnail,
+      // maybe the game request did. (maybe)
+      if (gameThumbnail === null && gameData.boardgames.boardgame.thumbnail != null) {
+        gameThumbnail = gameData.boardgames.boardgame.thumbnail;
+      }
 
-    // This is the JSON extracted for each game.
-    const gameJSON: GameDataSave = {
-      id: gameID,
-      title: gameTitle,
-      yearpublished: gameYearPublished,
-      thumbnail: gameThumbnail,
-      publisher: gamePublisher,
-      description: gameDescription,
-      gameown: gameOwn,
-      gamewanttobuy: gameWantToBuy,
-      gameprevowned: gamePrevOwned,
-      gamefortrade: gameForTrade,
-    };
+      // The games relationship to my collection
+      let gameOwn: boolean = false;
+      let gameWantToBuy: boolean = false;
+      let gamePrevOwned: boolean = false;
+      let gameForTrade: boolean = false;
 
-    // Only record the data for the games I care about.
-    if (gameOwn === true || gameWantToBuy === true || gamePrevOwned === true || gameForTrade === true) {
+      if (game.status._attributes.own === '1') {
+        gameOwn = true;
+      }
+
+      if (game.status._attributes.want === '1') {
+        gameWantToBuy = true;
+      }
+
+      if (game.status._attributes.prevowned === '1') {
+        gamePrevOwned = true;
+      }
+
+      if (game.status._attributes.fortrade === '1') {
+        gameForTrade = true;
+      }
+
+      // This is the JSON extracted for each game.
+      const gameJSON: GameDataSave = {
+        id: gameID,
+        title: gameTitle,
+        yearpublished: gameYearPublished,
+        thumbnail: gameThumbnail,
+        publisher: gamePublisher,
+        description: gameDescription,
+        gameown: gameOwn,
+        gamewanttobuy: gameWantToBuy,
+        gameprevowned: gamePrevOwned,
+        gamefortrade: gameForTrade,
+      };
+
       parsedCollectionData.push(gameJSON);
+
     } else {
-      console.log(`-- This game doesn't count: ${gameTitle}`);
+      console.log(`-- This game doesn't count: ${game.name._text}`);
     }
   }
 
@@ -267,4 +175,4 @@ if (process.argv[2] != null) {
   user = 'BillLenoir';
 }
 
-void fetchAndProcessCollectionData(user);
+void prepareData(user);
