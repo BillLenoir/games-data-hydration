@@ -13,116 +13,121 @@ async function prepareData(username: string): Promise<void> {
 
   // Save the response.
   await fs.writeFile(rawResponseFile, rawResponse);
-  console.log('Raw Response XML File successfully written!');
+  console.log('I wrote the raw response XML file for the collection data!');
 
   // Transform the response
   const convertedResponse = convert.xml2json(rawResponse, { compact: true, spaces: 2 });
   const collectionData: GameDataRead = JSON.parse(convertedResponse);
-  console.log('I transformed the data!');
+  console.log('I transformed the collection data!');
 
   // Process the returned list of games
   const parsedDataFile = './data/collectionData.json';
-  const parsedData: GameDataSave[] = await parseData(collectionData);
+  const parsedData: GameDataSave[] = await parseCollectionData(collectionData);
 
   // Save the final output. Still need to tigger hydration.
   const writeableParsedData = JSON.stringify(parsedData);
   await fs.writeFile(parsedDataFile, writeableParsedData);
-  console.log('Parsed Data File successfully written!');
+  console.log('I wrote the parsed data file for the collection data!');
 
 }
 
 async function fetchCollectionData(username:string) {
 
-  const requestURL: string = `${bggBaseURL}collection/${username}`;
-  const response = await fetch(requestURL);
+  const requestCollectionDataURL: string = `${bggBaseURL}collection/${username}`;
+  const response = await fetch(requestCollectionDataURL);
 
   if (!response.ok) {
     throw new Error(`HTTP error! Status: ${response.status}`);
   }
 
   const rawResponseText = await response.text();
-  console.log('I fetched the data!');
+  console.log('I fetched the collection data!');
   return rawResponseText;
 
 }
 
-// Once the collection request has been returned and transformed,
-// extract each game's games data and request additional data from BGG.
-async function parseData(collectionData: GameDataRead) {
+async function parseCollectionData(collectionData: GameDataRead) {
+
+  // An array where each element is parsed data for a single game.
   const parsedCollectionData: GameDataSave[] = [];
 
+  // This cycles through the collection data, one game at a time.
   for (const game of collectionData.items.item) {
 
-    // Only care about games that I own, want, previously owned, or want to sell or trade
+    // Will only process games that I own, want, previously owned, or want to sell or trade
     if (game.status._attributes.own === '1' || game.status._attributes.want === '1' || game.status._attributes.prevowned === '1' || game.status._attributes.fortrade === '1') {
 
-      // Data from the collection request.
-      // There's no guarantee that the response
-      // will contain all of the needed elements.
+      // Extract the data from the transformation colleciton data request..
+      let gameID: string = '';
+      if (game._attributes.objectid != undefined) {
+        gameID = game._attributes.objectid;
+      }
 
-      const gameID: string = game._attributes.objectid;
-
-      const gameTitle: string = game.name._text;
+      let gameTitle: string = '';
+      if (game.name._text != undefined) {
+        gameTitle = game.name._text;
+      }
 
       let gameYearPublished: string = '';
-      if (game.yearpublished != null) {
+      if (game.yearpublished != undefined) {
         gameYearPublished = game.yearpublished._text;
       }
 
       let gameThumbnail: string = '';
-      if (game.thumbnail != null) {
+      if (game.thumbnail != undefined) {
         gameThumbnail = game.thumbnail._text;
       }
 
-      const gameData = await fetchGameDataFromBGG(gameID);
-
-      // Data from the game request
-
-      let gameDescription: string = '';
-      if (gameData.boardgames.boardgame.description._text != null) {
-        gameDescription = gameData.boardgames.boardgame.description._text;
-      }
-
-      // Some games have more than 1 publisher and the data structure for this differs
-      // If it is an array, that means there's more than one. We extract just the publisher
-      // name, adding it to an array which is then joined and saved as gamePublisher.
-      let gamePublisher: string = '';
-      if (gameData.boardgames.boardgame.boardgamepublisher[0] != null) {
-        const publisherArray = [];
-        for (const publisher of gameData.boardgames.boardgame.boardgamepublisher) {
-          publisherArray.push(publisher._text);
-          gamePublisher = publisherArray.join('xxxxx');
-        }
-      } else {
-        gamePublisher = gameData.boardgames.boardgame.boardgamepublisher._text;
-      }
-
-      // If the collection request didn't return a thumbnail,
-      // maybe the game request did. (maybe)
-      if (gameThumbnail === null && gameData.boardgames.boardgame.thumbnail != null) {
-        gameThumbnail = gameData.boardgames.boardgame.thumbnail;
-      }
-
-      // The games relationship to my collection
       let gameOwn: boolean = false;
-      let gameWantToBuy: boolean = false;
-      let gamePrevOwned: boolean = false;
-      let gameForTrade: boolean = false;
-
       if (game.status._attributes.own === '1') {
         gameOwn = true;
       }
 
+      let gameWantToBuy: boolean = false;
       if (game.status._attributes.want === '1') {
         gameWantToBuy = true;
       }
 
+      let gamePrevOwned: boolean = false;
       if (game.status._attributes.prevowned === '1') {
         gamePrevOwned = true;
       }
 
+      let gameForTrade: boolean = false;
       if (game.status._attributes.fortrade === '1') {
         gameForTrade = true;
+      }
+
+      // Fetch additional game data.
+      const rawResponseGameData = await fetchGameDataFromBGG(gameID);
+
+      // Transform the game data response
+      const convertedResponseGameData = convert.xml2json(rawResponseGameData, { compact: true, spaces: 4 });
+      const parsedGameData = JSON.parse(convertedResponseGameData);
+
+      // These are the elements that we extract from the additional call.
+      let gameDescription: string = '';
+      if (parsedGameData.boardgames.boardgame.description._text != undefined) {
+        gameDescription = parsedGameData.boardgames.boardgame.description._text;
+      }
+
+      // Some games have more than 1 publisher and the data structure for this differs
+      // If it is an array, that means there's more than one.
+      let gamePublisher: string = '';
+      if (parsedGameData.boardgames.boardgame.boardgamepublisher[0] != undefined) {
+        const publisherArray = [];
+        for (const publisher of parsedGameData.boardgames.boardgame.boardgamepublisher) {
+          publisherArray.push(publisher._text);
+          gamePublisher = publisherArray.join('xxxxx');
+        }
+      } else {
+        gamePublisher = parsedGameData.boardgames.boardgame.boardgamepublisher._text;
+      }
+
+      // If the collection request didn't return a thumbnail,
+      // maybe the game request did. (maybe)
+      if (gameThumbnail === '' && parsedGameData.boardgames.boardgame.thumbnail != undefined) {
+        gameThumbnail = parsedGameData.boardgames.boardgame.thumbnail;
       }
 
       // This is the JSON extracted for each game.
@@ -152,18 +157,17 @@ async function parseData(collectionData: GameDataRead) {
 // Not all of the data needed for the website is included in the collection request.
 // When parsing the data, make a request for each game. (There's a bunch.)
 async function fetchGameDataFromBGG(gameID: string) {
-  const gameDataUrl = `${bggBaseURL}boardgame/${gameID}`;
-  const response = await fetch(gameDataUrl);
+
+  const requestGameDataUrl = `${bggBaseURL}boardgame/${gameID}`;
+  const response = await fetch(requestGameDataUrl);
 
   if (!response.ok) {
     throw new Error(`HTTP error! Status: ${response.status}`);
   }
 
-  // As with the collection response, need to tranform the XML into JSON
-  const xmlData = await response.text();
-  const responseData = convert.xml2json(xmlData, { compact: true, spaces: 4 });
-  const returnData = JSON.parse(responseData);
-  return returnData;
+  const rawResponseText = await response.text();
+  return rawResponseText;
+
 }
 
 // The BGG user ID is an optional paramater when running the system.

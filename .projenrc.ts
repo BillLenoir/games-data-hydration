@@ -13,5 +13,8 @@ const project = new typescript.TypeScriptAppProject({
     '@jest/globals',
   ], /* Build dependencies for this module. */
   // packageName: undefined,  /* The "name" in package.json. */
+  gitignore: [
+    'data/',
+  ],
 });
 project.synth();
