@@ -14,7 +14,7 @@ const project = new typescript.TypeScriptAppProject({
   ], /* Build dependencies for this module. */
   // packageName: undefined,  /* The "name" in package.json. */
   gitignore: [
-    'data/',
+    'src/data/',
   ],
 });
 project.synth();

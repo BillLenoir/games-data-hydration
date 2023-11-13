@@ -9,7 +9,7 @@ async function prepareData(username: string): Promise<void> {
 
   // Fetch the data from BGG.
   const rawResponseFile: string = './data/rawResponse.xml';
-  const rawResponse: string = await fetchCollectionData(username);
+  const rawResponse: string = await fetchData('collection', username);
 
   // Save the response.
   await fs.writeFile(rawResponseFile, rawResponse);
@@ -31,20 +31,20 @@ async function prepareData(username: string): Promise<void> {
 
 }
 
-async function fetchCollectionData(username:string) {
+// async function fetchCollectionData(username:string) {
 
-  const requestCollectionDataURL: string = `${bggBaseURL}collection/${username}`;
-  const response = await fetch(requestCollectionDataURL);
+//   const requestCollectionDataURL: string = `${bggBaseURL}collection/${username}`;
+//   const response = await fetch(requestCollectionDataURL);
 
-  if (!response.ok) {
-    throw new Error(`HTTP error! Status: ${response.status}`);
-  }
+//   if (!response.ok) {
+//     throw new Error(`HTTP error! Status: ${response.status}`);
+//   }
 
-  const rawResponseText = await response.text();
-  console.log('I fetched the collection data!');
-  return rawResponseText;
+//   const rawResponseText = await response.text();
+//   console.log('I fetched the collection data!');
+//   return rawResponseText;
 
-}
+// }
 
 async function parseCollectionData(collectionData: GameDataRead) {
 
@@ -99,7 +99,7 @@ async function parseCollectionData(collectionData: GameDataRead) {
       }
 
       // Fetch additional game data.
-      const rawResponseGameData = await fetchGameDataFromBGG(gameID);
+      const rawResponseGameData = await fetchData('boardgame', gameID);
 
       // Transform the game data response
       const convertedResponseGameData = convert.xml2json(rawResponseGameData, { compact: true, spaces: 4 });
@@ -156,17 +156,32 @@ async function parseCollectionData(collectionData: GameDataRead) {
 
 // Not all of the data needed for the website is included in the collection request.
 // When parsing the data, make a request for each game. (There's a bunch.)
-async function fetchGameDataFromBGG(gameID: string) {
+// async function fetchGameDataFromBGG(gameID: string) {
 
-  const requestGameDataUrl = `${bggBaseURL}boardgame/${gameID}`;
-  const response = await fetch(requestGameDataUrl);
+//   const requestGameDataUrl = `${bggBaseURL}boardgame/${gameID}`;
+//   const response = await fetch(requestGameDataUrl);
+
+//   if (!response.ok) {
+//     throw new Error(`HTTP error! Status: ${response.status}`);
+//   }
+
+//   const rawResponseText = await response.text();
+//   return rawResponseText;
+
+// }
+
+async function fetchData(path: string, paramater: string) {
+
+  const requestUrl = `${bggBaseURL}${path}/${paramater}`;
+  console.log(requestUrl);
+  const response = await fetch(requestUrl);
 
   if (!response.ok) {
     throw new Error(`HTTP error! Status: ${response.status}`);
   }
 
-  const rawResponseText = await response.text();
-  return rawResponseText;
+  const rawResponse = await response.text();
+  return rawResponse;
 
 }
 
