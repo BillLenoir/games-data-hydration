@@ -11,6 +11,7 @@ const project = new typescript.TypeScriptAppProject({
   // description: undefined,  /* The description is just a string that helps people understand the purpose of the package. */
   devDeps: [
     '@jest/globals',
+    'tsx',
   ], /* Build dependencies for this module. */
   // packageName: undefined,  /* The "name" in package.json. */
   gitignore: [
