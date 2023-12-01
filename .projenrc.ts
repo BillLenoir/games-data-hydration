@@ -1,7 +1,7 @@
 import { typescript } from 'projen';
 const project = new typescript.TypeScriptAppProject({
   defaultReleaseBranch: 'main',
-  name: 'data-hydration',
+  name: 'data-preparation',
   projenrcTs: true,
 
   deps: [

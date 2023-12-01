@@ -1,6 +1,6 @@
-import * as fs from 'fs/promises';
+import fs from 'fs/promises';
 import fetch from 'node-fetch';
-import * as convert from 'xml-js';
+import convert from 'xml-js';
 import { GameDataRead, GameDataSave } from './interfaces';
 
 const bggBaseURL = process.env.BGG_URL ?? 'https://boardgamegeek.com/xmlapi/';
@@ -8,10 +8,10 @@ const bggBaseURL = process.env.BGG_URL ?? 'https://boardgamegeek.com/xmlapi/';
 export async function prepareData(username: string): Promise<void> {
 
   // Fetch the data from BGG.
-  const rawResponseFile: string = './data/rawResponse.xml';
   const rawResponse: string = await fetchData('collection', username);
 
   // Save the response.
+  const rawResponseFile: string = './data/rawResponse.xml';
   await fs.writeFile(rawResponseFile, rawResponse);
   console.log('I wrote the raw response XML file for the collection data!');
 
@@ -85,6 +85,9 @@ export async function parseCollectionData(collectionData: GameDataRead): Promise
 
       // Fetch additional game data.
       const rawResponseGameData = await fetchData('boardgame', gameID);
+
+      const rawResponseGameDataFile: string = `./data/game-data/game-${gameID}.xml`;
+      await fs.writeFile(rawResponseGameDataFile, rawResponseGameData);
 
       // Transform the game data response
       const convertedResponseGameData = convert.xml2json(rawResponseGameData, { compact: true, spaces: 4 });

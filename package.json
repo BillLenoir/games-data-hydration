@@ -1,5 +1,5 @@
 {
-  "name": "data-hydration",
+  "name": "data-preparation",
   "scripts": {
     "build": "npx projen build",
     "clobber": "npx projen clobber",
