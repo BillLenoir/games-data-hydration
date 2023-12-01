@@ -5,6 +5,10 @@
       "type": "build"
     },
     {
+      "name": "@tsconfig/node18",
+      "type": "build"
+    },
+    {
       "name": "@types/jest",
       "type": "build"
     },
@@ -73,6 +77,10 @@
     {
       "name": "typescript",
       "type": "build"
+    },
+    {
+      "name": "@aws-sdk/client-s3",
+      "type": "runtime"
     },
     {
       "name": "node-fetch",

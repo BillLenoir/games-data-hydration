@@ -5,7 +5,7 @@ import { GameDataRead, GameDataSave } from './interfaces';
 
 const bggBaseURL = process.env.BGG_URL ?? 'https://boardgamegeek.com/xmlapi/';
 
-export async function prepareData(username: string) {
+export async function prepareData(username: string): Promise<void> {
 
   // Fetch the data from BGG.
   const rawResponse: string = await fetchData('collection', username);
@@ -28,8 +28,6 @@ export async function prepareData(username: string) {
   const writeableParsedData = JSON.stringify(parsedData);
   await fs.writeFile(parsedDataFile, writeableParsedData);
   console.log('I wrote the parsed data file for the collection data!');
-
-  return parsedData;
 
 }
 
@@ -103,13 +101,13 @@ export async function parseCollectionData(collectionData: GameDataRead): Promise
 
       // Some games have more than 1 publisher and the data structure for this differs
       // If it is an array, that means there's more than one.
-      let gamePublisher: string[] = [];
+      const gamePublisher: string[] =[];
       if (parsedGameData.boardgames.boardgame.boardgamepublisher[0] != undefined) {
         for (const publisher of parsedGameData.boardgames.boardgame.boardgamepublisher) {
           gamePublisher.push(publisher._text);
         }
       } else {
-        gamePublisher[0] = parsedGameData.boardgames.boardgame.boardgamepublisher._text;
+        gamePublisher.push(parsedGameData.boardgames.boardgame.boardgamepublisher._text);
       }
 
       // If the collection request didn't return a thumbnail,

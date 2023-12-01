@@ -3,7 +3,7 @@ export interface GameDataSave {
   title: string;
   yearpublished: string;
   thumbnail: string;
-  publisher: string;
+  publisher: string[];
   description: string;
   gameown: boolean;
   gamewanttobuy: boolean;
