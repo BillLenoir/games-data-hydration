@@ -4,13 +4,13 @@
  */
 
 // snippet-start:[s3.JavaScript.buckets.uploadV3]
-import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 
 export const hydrateData = async (gameData: string) => {
   const client = new S3Client({});
   const command = new PutObjectCommand({
-    Bucket: 'beepbucket',
-    Key: 'collectionData.txt',
+    Bucket: "beepbucket",
+    Key: "collectionData.txt",
     Body: gameData,
   });
 

@@ -1,6 +1,10 @@
 {
   "dependencies": [
     {
+      "name": "@10mi2/tms-projen-projects",
+      "type": "build"
+    },
+    {
       "name": "@jest/globals",
       "type": "build"
     },
@@ -14,7 +18,7 @@
     },
     {
       "name": "@types/node",
-      "version": "^16",
+      "version": "^18",
       "type": "build"
     },
     {
@@ -28,7 +32,16 @@
       "type": "build"
     },
     {
-      "name": "eslint-import-resolver-node",
+      "name": "constructs",
+      "version": "^10.0.0",
+      "type": "build"
+    },
+    {
+      "name": "esbuild",
+      "type": "build"
+    },
+    {
+      "name": "eslint-config-prettier",
       "type": "build"
     },
     {
@@ -37,6 +50,10 @@
     },
     {
       "name": "eslint-plugin-import",
+      "type": "build"
+    },
+    {
+      "name": "eslint-plugin-prettier",
       "type": "build"
     },
     {
@@ -54,8 +71,7 @@
       "type": "build"
     },
     {
-      "name": "npm-check-updates",
-      "version": "^16",
+      "name": "prettier",
       "type": "build"
     },
     {

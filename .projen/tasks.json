@@ -24,6 +24,33 @@
         }
       ]
     },
+    "bundle": {
+      "name": "bundle",
+      "description": "Prepare assets",
+      "steps": [
+        {
+          "spawn": "bundle:index"
+        }
+      ]
+    },
+    "bundle:index": {
+      "name": "bundle:index",
+      "description": "Create a JavaScript bundle from src/index.ts",
+      "steps": [
+        {
+          "exec": "esbuild --bundle src/index.ts --target=\"node18\" --platform=\"node\" --outfile=\"assets/index/index.js\" --sourcemap --format=esm"
+        }
+      ]
+    },
+    "bundle:index:watch": {
+      "name": "bundle:index:watch",
+      "description": "Continuously update the JavaScript bundle from src/index.ts",
+      "steps": [
+        {
+          "exec": "esbuild --bundle src/index.ts --target=\"node18\" --platform=\"node\" --outfile=\"assets/index/index.js\" --sourcemap --format=esm --watch"
+        }
+      ]
+    },
     "clobber": {
       "name": "clobber",
       "description": "hard resets to HEAD of origin and cleans the local repo",
@@ -100,7 +127,7 @@
       "description": "Install project dependencies and update lockfile (non-frozen)",
       "steps": [
         {
-          "exec": "yarn install --check-files"
+          "exec": "yarn install"
         }
       ]
     },
@@ -109,7 +136,7 @@
       "description": "Install project dependencies using frozen lockfile",
       "steps": [
         {
-          "exec": "yarn install --check-files --frozen-lockfile"
+          "exec": "yarn install --immutable"
         }
       ]
     },
@@ -127,18 +154,36 @@
     },
     "pre-compile": {
       "name": "pre-compile",
-      "description": "Prepare the project for compilation"
+      "description": "Prepare the project for compilation",
+      "steps": [
+        {
+          "spawn": "bundle"
+        }
+      ]
     },
     "test": {
       "name": "test",
       "description": "Run tests",
+      "env": {
+        "NODE_OPTIONS": "--experimental-vm-modules"
+      },
       "steps": [
         {
-          "exec": "jest --passWithNoTests --updateSnapshot",
+          "exec": "jest --passWithNoTests --ci",
           "receiveArgs": true
         },
         {
           "spawn": "eslint"
+        }
+      ]
+    },
+    "test:update": {
+      "name": "test:update",
+      "description": "Update jest snapshots",
+      "steps": [
+        {
+          "exec": "jest --updateSnapshot --passWithNoTests --ci",
+          "receiveArgs": true
         }
       ]
     },
@@ -159,16 +204,13 @@
       },
       "steps": [
         {
-          "exec": "yarn upgrade npm-check-updates"
+          "exec": "yarn dlx npm-check-updates@16 --upgrade --target=minor --peer --dep=dev,peer,prod,optional --filter=@10mi2/tms-projen-projects,@jest/globals,@tsconfig/node18,@types/jest,@types/node,@typescript-eslint/eslint-plugin,@typescript-eslint/parser,constructs,esbuild,eslint-config-prettier,eslint-import-resolver-typescript,eslint-plugin-import,eslint-plugin-prettier,eslint,jest,jest-junit,prettier,projen,ts-jest,ts-node,tsx,typescript,@aws-sdk/client-s3,node-fetch,xml-js"
         },
         {
-          "exec": "npm-check-updates --upgrade --target=minor --peer --dep=dev,peer,prod,optional --filter=@jest/globals,@tsconfig/node18,@types/jest,@types/node,@typescript-eslint/eslint-plugin,@typescript-eslint/parser,eslint-import-resolver-node,eslint-import-resolver-typescript,eslint-plugin-import,eslint,jest,jest-junit,npm-check-updates,projen,ts-jest,ts-node,tsx,typescript,@aws-sdk/client-s3,node-fetch,xml-js"
+          "exec": "yarn install"
         },
         {
-          "exec": "yarn install --check-files"
-        },
-        {
-          "exec": "yarn upgrade @jest/globals @tsconfig/node18 @types/jest @types/node @typescript-eslint/eslint-plugin @typescript-eslint/parser eslint-import-resolver-node eslint-import-resolver-typescript eslint-plugin-import eslint jest jest-junit npm-check-updates projen ts-jest ts-node tsx typescript @aws-sdk/client-s3 node-fetch xml-js"
+          "exec": "yarn up @10mi2/tms-projen-projects @jest/globals @tsconfig/node18 @types/jest @types/node @typescript-eslint/eslint-plugin @typescript-eslint/parser constructs esbuild eslint-config-prettier eslint-import-resolver-typescript eslint-plugin-import eslint-plugin-prettier eslint jest jest-junit prettier projen ts-jest ts-node tsx typescript @aws-sdk/client-s3 node-fetch xml-js"
         },
         {
           "exec": "npx projen"
