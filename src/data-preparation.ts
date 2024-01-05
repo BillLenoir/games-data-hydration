@@ -9,6 +9,20 @@ export async function prepareData(username: string) {
   // Fetch the data from BGG.
   const rawResponse = await fetchData("collection", username);
 
+  if (typeof rawResponse === "undefined") {
+    throw new Error("There was no response from BGG");
+  }
+
+  if (
+    rawResponse.includes(
+      "Your request for this collection has been accepted and will be processed",
+    ) === true
+  ) {
+    throw new Error(
+      "Your request for this collection has been accepted and will be processed.  Please try again later for access.",
+    );
+  }
+
   // Save the response.
   const rawResponseFile: string = "./data/rawResponse.xml";
   if (typeof rawResponse != "undefined") {
