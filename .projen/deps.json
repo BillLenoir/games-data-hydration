@@ -99,6 +99,10 @@
       "type": "runtime"
     },
     {
+      "name": "dotenv",
+      "type": "runtime"
+    },
+    {
       "name": "node-fetch",
       "type": "runtime"
     },
