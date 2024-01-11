@@ -40,6 +40,7 @@ jspm_packages/
 .cache
 src/data/
 src/.env
+src/data/rawResponse.xml
 !/.projenrc.js
 /test-reports/
 junit.xml

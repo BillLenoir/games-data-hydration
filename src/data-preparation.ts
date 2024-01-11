@@ -36,6 +36,7 @@ export async function prepareData(username: string) {
   );
 
   // Transform the response
+  console.log(rawResponse);
   const convertedResponse = convert.xml2json(rawResponse, {
     compact: true,
     spaces: 2,

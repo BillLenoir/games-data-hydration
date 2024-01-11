@@ -21,6 +21,6 @@ const project = new TmsTypeScriptAppProject({
     "@10mi2/tms-projen-projects",
   ] /* Build dependencies for this module. */,
   // packageName: undefined,  /* The "name" in package.json. */
-  gitignore: ["src/data/", "src/.env"],
+  gitignore: ["src/data/", "src/.env", "src/data/rawResponse.xml"],
 });
 project.synth();
