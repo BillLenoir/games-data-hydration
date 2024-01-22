@@ -12,6 +12,7 @@ const project = new TmsTypeScriptAppProject({
     "xml-js",
     "@aws-sdk/client-s3",
     "dotenv",
+    "zod",
   ] /* Runtime dependencies of this module. */,
   // description: undefined,  /* The description is just a string that helps people understand the purpose of the package. */
   devDeps: [
@@ -21,6 +22,6 @@ const project = new TmsTypeScriptAppProject({
     "@10mi2/tms-projen-projects",
   ] /* Build dependencies for this module. */,
   // packageName: undefined,  /* The "name" in package.json. */
-  gitignore: ["src/data/", "src/.env", "src/data/rawResponse.xml"],
+  gitignore: ["src/data/*", "src/.env"],
 });
 project.synth();

@@ -5,30 +5,34 @@ import { prepareData } from "./data-preparation";
 dotenv.config();
 
 // Environmental variables
-const user: string | undefined = process.env.BGG_USER;
-if (typeof user === "undefined") {
-  throw new Error("Did not specify the BGG user");
+if (typeof process.env.BGG_USER === "undefined") {
+  throw new Error(
+    "Did not specify the BGG user. See BGG_USER in the .env file",
+  );
 }
 
-const whereToSave: string | undefined = process.env.WHERE_TO_SAVE;
-if (typeof whereToSave === "undefined") {
-  throw new Error("Did not specify where to save the data");
+if (typeof process.env.SAVED_DATA_FORMAT === "undefined") {
+  throw new Error(
+    "Did not specify how to save the data. See SAVED_DATA_FORMAT in the .env file",
+  );
 }
 
-// Start the clock ticking to record how long this takes
-const startTime = performance.now();
+if (typeof process.env.NEED_TO_FETCH === "undefined") {
+  throw new Error(
+    "Did not specify whether or not to fetch new data. See NEED_TO_FETCH in the .env file",
+  );
+}
 
-const gameDataPromise = await prepareData(user);
+if (typeof process.env.WHERE_TO_SAVE === "undefined") {
+  throw new Error(
+    "Did not specify where to save the data. See WHERE_TO_SAVE in the .env file",
+  );
+}
+
+const gameDataPromise = await prepareData(process.env.BGG_USER);
 
 const gameData = JSON.stringify(gameDataPromise);
 
-if (whereToSave !== "locally") {
+if (process.env.WHERE_TO_SAVE !== "locally") {
   void hydrateData(gameData).then(() => void 0);
 }
-
-const endTime = performance.now();
-
-console.log(
-  "\x1b[47m%s\x1b[0m",
-  `Processing took ${endTime - startTime} miliseconds`,
-);

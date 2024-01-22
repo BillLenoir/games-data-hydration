@@ -9,6 +9,7 @@ import {
   ComboGameData,
   ComboRelationshipData,
   EntityData,
+  EntityDataZ,
 } from "./interfaces";
 import { processEntityData } from "./process-entity-data";
 
@@ -31,28 +32,29 @@ export async function prepareEntityGameData(
       game.status._attributes.prevowned === "1" ||
       game.status._attributes.fortrade === "1"
     ) {
-      // Extract the data from the transformation colleciton data request..
       const thisGameId = idCount++;
-      let bggGameID: number;
+
+      // Extract the data from the transformation colleciton data request..
+      // BGG Game ID
+      let bggGameID = 0;
       if (game._attributes.objectid === undefined) {
-        throw new Error(
-          "BGG claims there is no ID for this game. Something is WRONG!",
-        );
+        console.error(`BGG claims there is no ID for this game: ${game}`);
       } else {
         bggGameID = game._attributes.objectid;
       }
 
-      let gameTitle: string = "";
+      // Game Title
+      let gameTitle = "Not Title for this game";
       if (game.name._text !== undefined) {
         gameTitle = game.name._text;
       }
 
-      let gameYearPublished: number | null = null;
+      let gameYearPublished = "No year indicated";
       if (game.yearpublished !== undefined) {
         gameYearPublished = game.yearpublished._text;
       }
 
-      let gameThumbnail: string = "";
+      let gameThumbnail = null;
       if (game.thumbnail !== undefined) {
         gameThumbnail = game.thumbnail._text;
       }
@@ -81,8 +83,8 @@ export async function prepareEntityGameData(
       let retryFetch = true;
       let rawResponseGameData = await fetchData("boardgame", bggGameID);
 
-      const rawResponseGameDataFile: string = `./data/game-data/game-${bggGameID}.xml`;
-      if (typeof rawResponseGameData !== "undefined") {
+      const rawResponseGameDataFile = `./data/game-data/game-${bggGameID}.xml`;
+      if (rawResponseGameData !== undefined) {
         await fs.writeFile(rawResponseGameDataFile, rawResponseGameData);
         // Transform the game data response
         const convertedResponseGameData = convert.xml2json(
@@ -94,21 +96,19 @@ export async function prepareEntityGameData(
         );
         // const parsedGameDataFile: string = `./data/game-data/game-${gameID}.json`;
         // await fs.writeFile(parsedGameDataFile, convertedResponseGameData);
-        const gameData = JSON.parse(convertedResponseGameData);
+        const fullGameData = JSON.parse(convertedResponseGameData);
+        const gameData = fullGameData.boardgames.boardgame;
 
         // These are the elements that we extract from the additional call.
-        let gameDescription: string = "";
-        if (gameData.boardgames.boardgame.description._text !== undefined) {
-          gameDescription = gameData.boardgames.boardgame.description._text;
+        let gameDescription = "";
+        if (gameData.description._text !== undefined) {
+          gameDescription = gameData.description._text;
         }
 
         // If the collection request didn't return a thumbnail,
         // maybe the game request did. (maybe)
-        if (
-          gameThumbnail === "" &&
-          gameData.boardgames.boardgame.thumbnail !== undefined
-        ) {
-          gameThumbnail = gameData.boardgames.boardgame.thumbnail;
+        if (gameThumbnail === "" && gameData.thumbnail !== undefined) {
+          gameThumbnail = gameData.thumbnail;
         }
 
         // This is the JSON extracted for each game.
@@ -127,111 +127,105 @@ export async function prepareEntityGameData(
 
         parsedGameData.push(gameJSON);
 
+        // Start processing entities and relationships
+        const entityArray: EntityData[] = [];
+        // const entitiesToProcess = [];
+        // if (boardgame.boardgamedesigner !== undefined) {
+        //   entitiesToProcess.push({
+        //     data: boardgame.boardgamedesigner,
+        //     relationshiptype: "Designer",
+        //   });
+        // }
+        // if (gameData.boardgames.boardgame.boardgamepublisher !== undefined) {
+        //   const entityData = EntityDataZ.parse(
+        //     gameData.boardgames?.boardgame.boardgamepublisher,
+        //   );
+        //   entitiesToProcess.push({
+        //     data: entityData,
+        //     relationshiptype: "Publisher",
+        //   });
+        // }
+        // for (const entityType of entitiesToProcess) {
+        //   const newEntities: EntityData[] = buildEntityArray(
+        //     entityType.data,
+        //     entityType.relationshiptype,
+        //   );
+        //   processEntitiesAndRelationships(newEntities, thisGameId);
+        // }
+
         // Processing entities.
         // Designers
-        console.log(
-          gameData.boardgames.boardgame.boardgamedesigner._attributes.objectid,
-        );
-        if (gameData.boardgames.boardgame.boardgamedesigner !== undefined) {
-          processRelationshipData(
-            gameData.boardgames.boardgame.boardgamedesigner,
-            idCount,
-            thisGameId,
-            "Designer",
-          );
+        if (gameData.boardgamedesigner !== undefined) {
+          let gameDesigner = Array.isArray(gameData.boardgamedesigner)
+            ? gameData.boardgamedesigner
+            : [gameData.boardgamedesigner];
+          for (const entity of gameDesigner) {
+            entity.relationshiptype = "Designer";
+            entityArray.push(entity);
+          }
         }
 
         // Publishers
-        if (gameData.boardgames.boardgame.boardgamepublisher !== undefined) {
-          if (
-            gameData.boardgames.boardgame.boardgamepublisher[0] === undefined
-          ) {
-            const thisBggId =
-              gameData.boardgames.boardgame.boardgamepublisher._attributes
-                .objectid;
-            const thisBggName =
-              gameData.boardgames.boardgame.boardgamepublisher._text;
-            if (parsedEntityData[thisBggId] === undefined) {
-              parsedEntityData[thisBggId] = processEntityData(
-                parsedEntityData[thisBggId],
-                idCount,
-                thisBggId,
-                thisBggName,
-              );
+        if (gameData.boardgamepublisher !== undefined) {
+          if (Array.isArray(gameData.boardgamepublisher)) {
+            for (const entity of gameData.boardgamepublisher) {
+              entity.relationshiptype = "Publisher";
+              entityArray.push(entity);
             }
-            const thisRelationship = {
-              gameid: thisGameId,
-              entityid: parsedEntityData[thisBggId].id,
-              relationshiptype: "Publisher",
-            };
-            parsedRelationshipData.push(thisRelationship);
           } else {
-            for (const publisher of gameData.boardgames.boardgame
-              .boardgamepublisher) {
-              const thisBggId = publisher._attributes.objectid;
-              const thisBggName = publisher._text;
-              if (parsedEntityData[thisBggId] === undefined) {
-                parsedEntityData[thisBggId] = processEntityData(
-                  parsedEntityData[thisBggId],
-                  idCount,
-                  thisBggId,
-                  thisBggName,
-                );
-              }
-              const thisRelationship = {
-                gameid: thisGameId,
-                entityid: parsedEntityData[thisBggId].id,
-                relationshiptype: "Publisher",
-              };
-              parsedRelationshipData.push(thisRelationship);
-            }
+            gameData.boardgamepublisher.relationshiptype = "Publisher";
+            entityArray.push(gameData.boardgamepublisher);
           }
         }
 
-        // Game Family
-        if (gameData.boardgames.boardgame.boardgamefamily !== undefined) {
-          if (gameData.boardgames.boardgame.boardgamefamily[0] === undefined) {
-            const thisBggId =
-              gameData.boardgames.boardgame.boardgamefamily._attributes
-                .objectid;
-            const thisBggName =
-              gameData.boardgames.boardgame.boardgamefamily._text;
-            if (parsedEntityData[thisBggId] === undefined) {
-              parsedEntityData[thisBggId] = processEntityData(
-                parsedEntityData[thisBggId],
-                idCount,
-                thisBggId,
-                thisBggName,
-              );
-            }
-            const thisRelationship = {
-              gameid: thisGameId,
-              entityid: parsedEntityData[thisBggId].id,
-              relationshiptype: "Game Family",
-            };
-            parsedRelationshipData.push(thisRelationship);
-          } else {
-            for (const gamefamily of gameData.boardgames.boardgame
-              .boardgamefamily) {
-              const thisBggId = gamefamily._attributes.objectid;
-              const thisBggName = gamefamily._text;
-              if (parsedEntityData[thisBggId] === undefined) {
-                parsedEntityData[thisBggId] = processEntityData(
-                  parsedEntityData[thisBggId],
-                  idCount,
-                  thisBggId,
-                  thisBggName,
-                );
-              }
-              const thisRelationship = {
-                gameid: thisGameId,
-                entityid: parsedEntityData[thisBggId].id,
-                relationshiptype: "Game Family",
-              };
-              parsedRelationshipData.push(thisRelationship);
-            }
-          }
+        if (entityArray.length > 0) {
+          processEntitiesAndRelationships(entityArray, thisGameId);
         }
+
+        // Game Family
+        // if (gameData.boardgames.boardgame.boardgamefamily !== undefined) {
+        //   if (gameData.boardgames.boardgame.boardgamefamily[0] === undefined) {
+        //     const thisBggId =
+        //       gameData.boardgames.boardgame.boardgamefamily._attributes
+        //         .objectid;
+        //     const thisBggName =
+        //       gameData.boardgames.boardgame.boardgamefamily._text;
+        //     if (parsedEntityData[thisBggId] === undefined) {
+        //       parsedEntityData[thisBggId] = processEntityData(
+        //         parsedEntityData[thisBggId],
+        //         idCount,
+        //         thisBggId,
+        //         thisBggName,
+        //       );
+        //     }
+        //     const thisRelationship = {
+        //       gameid: thisGameId,
+        //       entityid: parsedEntityData[thisBggId].id,
+        //       relationshiptype: "Game Family",
+        //     };
+        //     parsedRelationshipData.push(thisRelationship);
+        //   } else {
+        //     for (const gamefamily of gameData.boardgames.boardgame
+        //       .boardgamefamily) {
+        //       const thisBggId = gamefamily._attributes.objectid;
+        //       const thisBggName = gamefamily._text;
+        //       if (parsedEntityData[thisBggId] === undefined) {
+        //         parsedEntityData[thisBggId] = processEntityData(
+        //           parsedEntityData[thisBggId],
+        //           idCount,
+        //           thisBggId,
+        //           thisBggName,
+        //         );
+        //       }
+        //       const thisRelationship = {
+        //         gameid: thisGameId,
+        //         entityid: parsedEntityData[thisBggId].id,
+        //         relationshiptype: "Game Family",
+        //       };
+        //       parsedRelationshipData.push(thisRelationship);
+        //     }
+        //   }
+        // }
       } else {
         if (retryFetch === true) {
           console.log(`Retrying the fetch of ${bggGameID}'s data`);
@@ -262,60 +256,50 @@ export async function prepareEntityGameData(
   console.log(`Games processed: ${parsedGameData.length}`);
   console.log(`Relationships processed: ${parsedRelationshipData.length}`);
 
-  function processRelationshipData(
-    data: EntityData | EntityData[],
-    currentIdCount: number,
+  // function buildEntityArray(
+  //   data: EntityData[],
+  //   relationshiptype: string,
+  // ): EntityData[] {
+  //   const theseEntities = [];
+  //   if (Array.isArray(data)) {
+  //     for (const entity of data) {
+  //       entity.relationshiptype = relationshiptype;
+  //       theseEntities.push(entity);
+  //     }
+  //   } else {
+  //     data.relationshiptype = relationshiptype;
+  //     theseEntities.push(data);
+  //   }
+  //   return theseEntities;
+  // }
+
+  function processEntitiesAndRelationships(
+    entityArray: EntityData[],
     thisGameId: number,
-    thisRelationship: string,
-  ): void {
-    let thisDesigner;
-    if (data[0] === undefined) {
-      const thisBggId = data._attributes.objectid;
-      const thisBggName = data._text;
-      if (parsedEntityData[thisBggId] === undefined) {
-        console.log("this is undefined");
-        thisDesigner = {
+  ) {
+    for (const entity of entityArray) {
+      if (parsedEntityData[entity._attributes.objectid] === undefined) {
+        const newEntity: ComboEntityData = {
           id: idCount++,
-          bggid: thisBggId,
-          name: thisBggName,
+          bggid: entity._attributes.objectid,
+          name: entity._text,
         };
-        if (
-          parsedEntityData[thisBggId] !== undefined &&
-          parsedEntityData[thisBggId].name !== thisBggName
-        ) {
-          throw new Error(
-            `We have two entities with the same BGG ID! ${parsedEntityData[thisBggId].name} and ${thisBggName}`,
-          );
-        }
+        parsedEntityData[entity._attributes.objectid] = newEntity;
+      } else if (
+        parsedEntityData[entity._attributes.objectid].name !== entity._text
+      ) {
+        throw new Error(
+          `We have two entities with the same BGG ID! ${
+            parsedEntityData[entity._attributes.objectid].name
+          } and ${entity._text}`,
+        );
       }
-      parsedEntityData.push
-      console.log(thisDesigner);
       const newRelationship = {
         gameid: thisGameId,
-        entityid: parsedEntityData[thisBggId].id,
-        relationshiptype: thisRelationship,
+        entityid: entity._attributes.objectid,
+        relationshiptype: entity.relationshiptype,
       };
       parsedRelationshipData.push(newRelationship);
-    } else {
-      for (const entity of data) {
-        const parsedEntity = JSON.parse(entity);
-        const thisBggId = parsedEntity._attributes.objectid;
-        const thisBggName = parsedEntity._text;
-        if (parsedEntityData[thisBggId] === undefined) {
-          parsedEntityData[thisBggId] = processEntityData(
-            parsedEntityData[thisBggId],
-            idCount,
-            thisBggId,
-            thisBggName,
-          );
-        }
-        const newRelationship = {
-          gameid: thisGameId,
-          entityid: parsedEntityData[thisBggId].id,
-          relationshiptype: thisRelationship,
-        };
-        parsedRelationshipData.push(newRelationship);
-      }
     }
   }
 

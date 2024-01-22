@@ -204,13 +204,13 @@
       },
       "steps": [
         {
-          "exec": "yarn dlx npm-check-updates@16 --upgrade --target=minor --peer --dep=dev,peer,prod,optional --filter=@10mi2/tms-projen-projects,@jest/globals,@tsconfig/node18,@types/jest,@types/node,@typescript-eslint/eslint-plugin,@typescript-eslint/parser,constructs,esbuild,eslint-config-prettier,eslint-import-resolver-typescript,eslint-plugin-import,eslint-plugin-prettier,eslint,jest,jest-junit,prettier,projen,ts-jest,ts-node,tsx,typescript,@aws-sdk/client-s3,dotenv,node-fetch,xml-js"
+          "exec": "yarn dlx npm-check-updates@16 --upgrade --target=minor --peer --dep=dev,peer,prod,optional --filter=@10mi2/tms-projen-projects,@jest/globals,@tsconfig/node18,@types/jest,@types/node,@typescript-eslint/eslint-plugin,@typescript-eslint/parser,constructs,esbuild,eslint-config-prettier,eslint-import-resolver-typescript,eslint-plugin-import,eslint-plugin-prettier,eslint,jest,jest-junit,prettier,projen,ts-jest,ts-node,tsx,typescript,@aws-sdk/client-s3,dotenv,node-fetch,xml-js,zod"
         },
         {
           "exec": "yarn install"
         },
         {
-          "exec": "yarn up @10mi2/tms-projen-projects @jest/globals @tsconfig/node18 @types/jest @types/node @typescript-eslint/eslint-plugin @typescript-eslint/parser constructs esbuild eslint-config-prettier eslint-import-resolver-typescript eslint-plugin-import eslint-plugin-prettier eslint jest jest-junit prettier projen ts-jest ts-node tsx typescript @aws-sdk/client-s3 dotenv node-fetch xml-js"
+          "exec": "yarn up @10mi2/tms-projen-projects @jest/globals @tsconfig/node18 @types/jest @types/node @typescript-eslint/eslint-plugin @typescript-eslint/parser constructs esbuild eslint-config-prettier eslint-import-resolver-typescript eslint-plugin-import eslint-plugin-prettier eslint jest jest-junit prettier projen ts-jest ts-node tsx typescript @aws-sdk/client-s3 dotenv node-fetch xml-js zod"
         },
         {
           "exec": "npx projen"
